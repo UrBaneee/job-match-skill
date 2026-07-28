@@ -1,5 +1,9 @@
 # jobmatch
 
+> **Other tools match the keywords and title-eligibility on your resume. This skill matches what you've actually done and can prove, your real ability and level: neither scared off by seniority labels nor fooled by them.**
+>
+> *别的工具匹配你简历上的关键词和 title 资格；这个 skill 匹配你真实做过、能拿证据的能力和水平——既不被职级字眼吓退，也不被它蒙骗。*
+
 A [Claude Code Skill](https://docs.claude.com/en/docs/claude-code/skills) for daily, brutally strict job-hunt matching. It searches multiple job platforms for openings, evaluates each one against your own evidence-backed "facts ledger" (not vibes, not the job title), and reports back **every** posting that genuinely clears the bar, with no artificial cap and no padding.
 
 ## Why this exists
