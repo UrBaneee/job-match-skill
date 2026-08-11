@@ -29,6 +29,28 @@ Deprioritized (verified live but low relevance: generic ops/support roles, not A
 
 Use `curl -s <url> | python3 -c ...` or WebFetch; cache nothing, since postings change daily.
 
+### Date-filter before paying for full JDs
+
+Full-JD fetches are the expensive part of a run, so apply the time window at the *list* stage, before pulling them. Done this way, a tight window makes a run cheaper rather than costlier, which is what makes a daily 24h sweep practical.
+
+- **Ashby**: the job-board list response already carries `publishedAt` per job. Filter directly, no extra calls.
+- **Lever**: the list response already carries `createdAt`. Filter directly, no extra calls.
+- **Greenhouse**: the list endpoint exposes `updated_at` but not `first_published`. Filter on `updated_at >= window_start` as a cheap pre-filter. This is a strict superset and therefore lossless: any req first published inside the window was necessarily also updated inside it. Then call the single-job endpoint for survivors only, to confirm the true `first_published` and to separate genuinely new reqs from merely refreshed old ones.
+
+Rough shape for a Greenhouse pre-filter:
+
+```python
+# cheap: one list call per company, no per-job fetches yet
+jobs = get(f"https://boards-api.greenhouse.io/v1/boards/{co}/jobs")["jobs"]
+maybe_fresh = [j for j in jobs if j["updated_at"] >= window_start]   # lossless superset
+# expensive: only now, and only for survivors
+for j in maybe_fresh:
+    detail = get(f"https://boards-api.greenhouse.io/v1/boards/{co}/jobs/{j['id']}")
+    true_date = detail["first_published"]        # the real post date
+```
+
+Titles still get filtered against `JD_KEYWORDS.md` as before; do that in the same cheap pass.
+
 ## Source type 2: Web search (discovery of companies you don't know)
 
 WebSearch with role terms from JD_KEYWORDS.md plus freshness and ATS site filters:
@@ -66,7 +88,8 @@ For LinkedIn Jobs / Indeed / a specific company portal that blocks curl: `previe
 ## Practical notes
 
 - Dedupe against `seen.tsv` **before** spending fetches on full JDs.
-- Date filter: prefer `first_published`/`createdAt` within 14 days when the API exposes it.
+- Date filter: apply the run's time window at the list stage (see "Date-filter before paying for full JDs" above) rather than after fetching everything.
+- On a tight window (24h/3d), the ATS APIs carry the run. Web search and aggregators are tuned for discovery, not recency, so they mostly surface older reqs; keep them for widening the company roster, and expect their hits to land in the out-of-window section.
 - Location filter: US city or "Remote (US)". "Remote" with no country plus a US company means you should verify inside the JD text.
 - Keep per-run fetch volume sane: roughly 10–15 ATS board pulls plus 5–8 web searches plus 1 HN pull is plenty for 20–30 candidates.
 - 403/404/empty board means skip silently, note nothing. Never fabricate a posting or URL from memory; every reported link must have been fetched this run.

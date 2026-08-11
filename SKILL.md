@@ -1,6 +1,6 @@
 ---
 name: jobmatch
-description: Daily job hunt. Search all platforms for US jobs, strictly evaluate the candidate's real abilities (a facts ledger) against each full JD ignoring seniority labels, and deliver EVERY genuinely applyable posting (no upper cap; 10 is a floor, not a target) with fact-grounded match evidence. Use when the user invokes /jobmatch, asks to find jobs to apply to today, or asks whether a specific posting matches their abilities.
+description: Daily job hunt. Search all platforms for US jobs, strictly evaluate the candidate's real abilities (a facts ledger) against each full JD ignoring seniority labels, and deliver EVERY genuinely applyable posting (no upper cap; 10 is a floor, not a target) with fact-grounded match evidence. Accepts a freshness window argument such as 24h, 7d, 30d, or all; defaults to the gap since the last run. Use when the user invokes /jobmatch, asks to find jobs to apply to today or this week, or asks whether a specific posting matches their abilities.
 ---
 
 # jobmatch: daily strict-match job hunt
@@ -8,6 +8,29 @@ description: Daily job hunt. Search all platforms for US jobs, strictly evaluate
 Find **every** US job posting the candidate can genuinely do, judged **only** on ability-vs-JD evidence. Titles and seniority words carry zero weight; unverifiable claims about abilities are forbidden.
 
 **No upper cap on results.** The candidate is job-hunting and wants a shot at every posting they qualify for. Present *all* jobs that clear the qualify bar (Tier S and Tier A alike). 10 is the minimum to aim for, never a ceiling. If 25 qualify, report 25. The only reasons a qualifying job is left out are the strict rubric (a required item missing, or a hard exclusion), never "we already have enough" or "this family is over-represented today." Strictness gates *quality*, not *quantity*.
+
+## Time window (how far back to look)
+
+The window is an argument the user passes when invoking the skill, e.g. `/jobmatch 24h`.
+
+| Argument | Window | Use when |
+|---|---|---|
+| `24h` or `1d` | last 24 hours | running it daily; you only want what's brand new |
+| `3d` | last 3 days | checking every few days |
+| `7d` or `1w` | last 7 days | the common case, a weekly sweep |
+| `14d` / `30d` | 2 / 4 weeks | catching up after a break |
+| `90d` | 3 months | the widest useful net |
+| `all` | no window | exhaustive audit; ghost-job floor below still applies |
+
+**Default when no argument is given**: infer it from `seen.tsv`. Use the gap since the last recorded run, so a daily user gets 24h and someone returning after 8 days gets 8d. If `seen.tsv` is missing or empty, default to `7d`. This works because everything older was already reported and logged on a previous run.
+
+**State the window on the first line of the report**, including whether it was inferred, e.g. `Window: last 24h (inferred, last run 2026-07-27)`. A saved report should be self-documenting.
+
+**Never silently exceed the window.** A posting outside it does not belong in the main list, however good the ability match.
+
+**Thin windows are expected, not a failure.** Strict scoring plus a 24-hour window will often yield 0 to 3 jobs. That is the correct answer for a quiet day. Report the real number plainly and never loosen the bar to fill space. But when the window yields **fewer than 5 qualifying jobs**, also evaluate the next window up and report those under a clearly separated heading, `Just outside your window (N to M days old)`. Never merge them into the main list. This keeps a quiet day honest and still useful, and leaves the choice with the candidate.
+
+**Ghost-job floor, regardless of window**: even under `all`, still drop postings first-published in a prior calendar year and undated evergreen-pipeline reqs (some companies leave the same req open for years). That is not a freshness preference, it is a filled-or-fake filter.
 
 ## Fixed paths (adapt these to your own setup)
 
@@ -29,10 +52,11 @@ Follow [references/search-playbook.md](references/search-playbook.md). Requireme
 - Collect **enough candidates to surface every qualifying job**, not a fixed number. Cast wide (aim for 30 to 50+ raw candidates across families) since strict scoring has heavy attrition. Under-collecting silently drops jobs the candidate could have applied to.
 - Prefer sources whose full JD text is fetchable (Greenhouse/Lever/Ashby). A snippet is never enough to evaluate.
 - **Freshness is a first-class filter and the primary sort. Job-hunters need current openings; stale postings waste their time.**
-  - **Sort every output freshest-first** by best-known date (Greenhouse `first_published`, Ashby `publishedAt`, Lever `createdAt`). The newest jobs go at the top of the report where the candidate looks first. Date-descending order beats tier order for the overall list (still note tier per row).
-  - **Drop stale postings**: anything **more than 90 days old** (roughly 3 months), or first-published in a **prior calendar year**, or an undated "evergreen-pipeline" role (e.g. some companies keep reqs open for years). These are almost always filled or ghost. Do NOT recommend them, even if the ability match is perfect. A prior-year posting in the current year is a no-send.
-  - **Greenhouse rescue**: if `first_published` is old but `updated_at` is within roughly 21 days, the role is being actively refreshed, so keep it and show the updated date. (Ashby/Lever expose no update signal, so their date is final.)
-  - Within the kept set, 14 days or newer is ideal; flag anything 45 to 90 days old as "aging" so the candidate prioritizes the fresh ones.
+  - **Apply the requested time window** (see the Time window section above) against the true post date: Greenhouse `first_published`, Ashby `publishedAt`, Lever `createdAt`. Anything older is out of the main list.
+  - **Filter by date before paying for full JDs.** Ashby and Lever both expose the post date in their list response, so filter there directly. Greenhouse's list endpoint exposes `updated_at` but not `first_published`, so use `updated_at >= window start` as a cheap pre-filter (a strict superset, since anything published inside the window was necessarily updated inside it), then confirm the true date per-job only for survivors. Tight windows therefore run *faster* and cheaper than wide ones, which is what makes a daily 24h run practical. Details in [references/search-playbook.md](references/search-playbook.md).
+  - **Sort every output freshest-first.** The newest jobs go at the top of the report where the candidate looks first. Date-descending order beats tier order for the overall list (still note tier per row).
+  - **Greenhouse refreshed-but-older roles**: if `first_published` predates the window but `updated_at` falls inside it, the req is being actively refreshed and is plausibly live, but it is not new. Do not put it in the main list. Report it under `Recently refreshed (originally posted <date>)` and show both dates so the candidate can judge. (Ashby/Lever expose no update signal, so their date is final.)
+  - Within a wide window (30d or more), flag anything older than 45 days as "aging" so the candidate prioritizes the fresh ones.
 
 ### 3. Evaluate strictly: the core contract
 
@@ -46,7 +70,7 @@ For each candidate posting, fetch the **full JD**, then apply [references/evalua
 
 ### 4. Report
 
-Write `reports/YYYY-MM-DD.md` using the format in [references/evaluation-rubric.md](references/evaluation-rubric.md) § Report format. **Report every job that clears the qualify bar, with no upper limit.** Both Tier S and Tier A are applyable and both go in the main recommendation list (tier just signals strength). If only 6 qualify, deliver 6 and say so; if 30 qualify, deliver 30. Never pad with sub-bar matches (that wastes an application) and never trim qualifying ones (that costs a shot). Each entry names the recommended resume variant/family and the top gap to prep for. Order by freshness (see §2) so the candidate can triage, but present them all.
+Write `reports/YYYY-MM-DD.md` using the format in [references/evaluation-rubric.md](references/evaluation-rubric.md) § Report format. Open with the time window used, then **report every job that clears the qualify bar inside that window, with no upper limit.** Both Tier S and Tier A are applyable and both go in the main recommendation list (tier just signals strength). If only 6 qualify, deliver 6 and say so; if 30 qualify, deliver 30. Never pad with sub-bar matches (that wastes an application) and never trim qualifying ones (that costs a shot). Each entry names the recommended resume variant/family and the top gap to prep for. Order by freshness (see §2) so the candidate can triage, but present them all. If the window produced fewer than 5, append the `Just outside your window` section described in the Time window section.
 
 ### 5. Log
 

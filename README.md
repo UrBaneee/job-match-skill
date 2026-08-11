@@ -15,7 +15,25 @@ This skill enforces:
 - **Evidence-only claims**: every "you're qualified for this" statement must cite an ID in your own facts ledger. No fact ID, no credit.
 - **No seniority/YOE gatekeeping**: a "Senior Engineer" posting whose actual requirements you meet is in scope. Job titles and "5+ years" numbers are noise, not filters.
 - **No output cap**: if 6 jobs qualify, you get 6. If 40 qualify, you get 40. The strictness is in the evaluation, not in an arbitrary quota.
-- **Freshness-first**: postings are sorted newest-first, and anything stale (>90 days old, or posted in a prior year, or an undated evergreen pipeline) is dropped, because applying to a dead listing wastes your time.
+- **Freshness-first, and you pick the window**: run it with `24h` for just-posted roles, `7d` for a weekly sweep, up to `90d` or `all`. Postings are sorted newest-first, and dead listings (prior-year reqs, undated evergreen pipelines) are dropped at every setting.
+
+## Choosing a time window
+
+Pass the window as an argument:
+
+```
+/jobmatch 24h     last 24 hours, for a daily run
+/jobmatch 7d      last week, the common case
+/jobmatch 30d     catching up after a break
+/jobmatch all     exhaustive audit
+```
+
+With no argument it infers the window from your last run recorded in `seen.tsv`, so a daily user gets 24h and someone returning after 8 days gets 8d. The window used is printed at the top of every report.
+
+Two things worth knowing:
+
+- **A tight window runs faster, not slower.** The date filter is applied at the job-board list stage, before the expensive full-JD fetches, so a daily 24h sweep is cheap to run.
+- **A quiet day is a real answer.** Strict scoring plus a 24-hour window will sometimes return 0 to 3 jobs. The skill reports that number honestly instead of loosening the bar, and when a window yields fewer than 5 it appends a clearly separated "just outside your window" section so you can still see what's nearby.
 
 ## How it works
 
