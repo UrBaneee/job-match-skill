@@ -114,8 +114,10 @@ WebSearch with role terms from JD_KEYWORDS.md plus freshness and ATS site filter
 
 - `"forward deployed engineer" site:jobs.ashbyhq.com OR site:boards.greenhouse.io OR site:jobs.lever.co`
 - `"AI evaluation engineer" OR "LLM evaluation" hiring 2026`
-- `"solutions engineer" AI startup remote US posted`
+- `"applied AI architect" OR "deployment strategist" OR "customer engineer" AI startup remote US posted`
 - Vary family per day (rotation note in seen.tsv header, or just check yesterday's report).
+
+**2026-08-10 correction**: pass-rate analysis of 197 evaluated postings found that titles containing "Sales Engineer" / "Pre-Sales" / "Solutions Consultant" cleared the bar 14% of the time (36 evaluated, 5 passed), while the same client-facing, technical work titled "Applied AI Architect" / "Deployment Strategist" / "Customer Engineer" cleared 50% (18 evaluated, 9 passed), and "Forward Deployed Engineer" cleared 77% (26 evaluated, 20 passed). The former gates on a professional pre-sales career history as a required item; the latter is scored on builder ability. If your candidate's facts ledger has no professional sales-engineering job history, deprioritize "Sales Engineer" / "Pre-Sales" search terms in favor of the builder-titled equivalents, unless a specific JD explicitly lowers the bar (e.g. it explicitly accepts side-project-level customer experience).
 
 Search hits from LinkedIn/Indeed/Glassdoor usually 403 on fetch. **Chase the same posting to the employer's own careers page / ATS URL** and evaluate there. If no fetchable version exists, drop it.
 
