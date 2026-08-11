@@ -43,6 +43,16 @@ Two things worth knowing:
 4. **Report everything that qualifies**: one table, freshest first, both tiers included, no cap.
 5. **Log** every evaluated posting (including rejects) to a dedupe ledger, so nothing gets re-recommended.
 
+## Scope: what ships configured, and what you swap
+
+The **evaluation engine is field-agnostic**: a facts ledger, requirement-by-requirement mapping, tier verdicts, and freshness windows all work the same for a nurse, an accountant, or an ML engineer. What is *not* field-agnostic is where it looks for jobs.
+
+**What ships configured**: an AI/tech roster (~140 employers on Greenhouse, Ashby, and Lever). If you are hunting AI/tech roles, it works out of the box.
+
+**If you are not in tech, you must swap the sources.** Measured 2026-08-10: of 14 major non-tech employers (Mayo Clinic, Kaiser, JPMorgan, Goldman, Target, Walmart, McKinsey, Deloitte, Boeing, Harvard, Red Cross, Pfizer, NY Times, Cleveland Clinic), **zero** are reachable on Greenhouse/Ashby/Lever. Those three cover tech startups and little else. Your industry's employers are most likely on **Workday** (healthcare, finance, retail, manufacturing, education), **USAJobs** (US government), or iCIMS/Taleo.
+
+[`references/search-playbook.md`](references/search-playbook.md) opens with a per-industry ATS table, a verified Workday recipe (including how to parse its dates into the freshness window), and a bulk-probe method for building your own roster of 100+ employers in a few minutes. Swap the roster and rewrite `JD_KEYWORDS.md` with your own role titles, and the rest of the machinery carries over unchanged.
+
 ## Setup
 
 This is a template. It references placeholder paths you need to fill in for your own use:

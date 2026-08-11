@@ -1,10 +1,54 @@
-# Search Playbook: 全平台搜索战术
+# Search Playbook
 
-Goal: 20–30 fresh candidates per run whose **full JD text is fetchable**. Mix at least 3 source types. Search terms come from `JD_KEYWORDS.md` (the 实际岗位名 lists per role family); don't invent new ones from scratch.
+Goal: enough fresh candidates per run to surface every qualifying job, all with **fetchable full JD text**. Mix at least 3 source types. Search terms come from `JD_KEYWORDS.md` (your role families and the real job titles used for each); don't invent new ones from scratch.
+
+---
+
+## ⚠️ Read this first if you are not in tech
+
+**The company roster shipped in this file is AI/tech only, and the three ATSes it leans on cover almost nothing outside tech.**
+
+Measured 2026-08-10: of 14 major non-tech employers (Mayo Clinic, Cleveland Clinic, Kaiser, JPMorgan, Goldman Sachs, Target, Walmart, McKinsey, Deloitte, Boeing, Harvard, Red Cross, Pfizer, NY Times), **zero** were reachable on Greenhouse, Ashby, or Lever. Those three dominate tech startups and very little else. If you work in healthcare, finance, retail, government, education, manufacturing, logistics, legal, or nonprofit, source type 1 as configured below will return an empty pool, and that is a roster problem, not a bug in the skill.
+
+The evaluation engine (facts ledger, requirement mapping, freshness windows) is field-agnostic. Only the **sources** and the **role keywords** need swapping. Do this:
+
+1. **Find where your industry's employers actually post** (table below), and use those endpoints as your source type 1.
+2. **Build your own roster** with the bulk-probe method in § Building your roster.
+3. **Rewrite `JD_KEYWORDS.md`** with your own role families and their real-world job titles.
+
+### Which ATS does your field use
+
+| Field | Dominant ATS | Reachable? |
+|---|---|---|
+| Tech startups, AI labs | Greenhouse, Ashby, Lever | Yes, clean public JSON (this file's default) |
+| Healthcare systems, hospitals, pharma | **Workday**, iCIMS, Taleo | Workday yes (recipe below); iCIMS/Taleo via web search |
+| Banking, insurance, finance | **Workday**, Taleo | Same |
+| Retail, hospitality, logistics | **Workday**, iCIMS | Same |
+| Manufacturing, industrial | Workday, SuccessFactors (SAP) | Workday yes; SuccessFactors via web search |
+| Universities, education | Workday, PageUp, Interfolio | Workday yes; others via web search |
+| US federal / state government | **USAJobs** | Yes, official public API at `developer.usajobs.gov` |
+| Nonprofits, small orgs | Workable, BambooHR, Greenhouse | Workable yes (endpoint already listed below) |
+
+### Workday recipe (the enterprise default, works across most non-tech fields)
+
+```
+POST https://<tenant>.<host>.myworkdayjobs.com/wday/cxs/<tenant>/<site>/jobs
+Content-Type: application/json
+{"appliedFacets":{},"limit":20,"offset":0,"searchText":"nurse"}
+```
+
+- `<host>` is `wd1` / `wd3` / `wd5` / `wd12`, and `<tenant>` / `<site>` come straight from the employer's careers URL. Open their careers page and copy the pieces out of the address bar.
+- **`searchText` does server-side keyword search**, which is actually better than Greenhouse/Ashby/Lever, where you pull the whole board and filter client-side. Query your role titles directly.
+- **Dates**: `postedOn` is a human-readable string that is day-precise up to a month (`"Posted Today"`, `"Posted 20 Days Ago"`) and then buckets into `"Posted 30+ Days Ago"`. So it supports the `24h` / `7d` / `30d` windows fine; only `all` loses precision. Parse the string into a day count.
+- Verified live 2026-08-10: CVS Health (`cvshealth` / `CVS_Health_Careers` / `wd1`, 1,043 hits for "nurse"), Target (`target` / `targetcareers` / `wd5`), Salesforce (`salesforce` / `External_Career_Site` / `wd12`).
+
+Everything below this line is the tech/AI configuration. Treat the company lists as a worked example of the method, not as the method itself.
+
+---
 
 ## Source type 1: ATS APIs (highest yield, full JD, no blocking)
 
-These return clean JSON including full descriptions. Iterate a company list (see below) rather than crawling.
+These return clean JSON including full descriptions. Iterate a company list (see below) rather than crawling. **The list below is the AI/tech example roster.** Swap it for your own field's employers, built with § Building your roster.
 
 - **Greenhouse**: list at `https://boards-api.greenhouse.io/v1/boards/<company>/jobs?content=true`, full HTML JD in `content`. Filter client-side by title/keyword/location. **Real post date**: fetch the single-job endpoint `.../jobs/<id>`, which returns `first_published` (the list endpoint does NOT). Use `first_published` as the true post date, `updated_at` as last-refreshed.
 - **Lever**: `https://api.lever.co/v0/postings/<company>?mode=json`, JD in `description`/`lists`.
@@ -12,7 +56,20 @@ These return clean JSON including full descriptions. Iterate a company list (see
 - **SmartRecruiters**: `https://api.smartrecruiters.com/v1/companies/<company>/postings`
 - **Workable**: `https://apply.workable.com/api/v1/widget/accounts/<company>` (JD needs per-job fetch)
 
-Company slugs verified working 2026-07-24: **GH** `anthropic`, `scaleai`, `databricks`, `togetherai`, `vercel`, `brex`. **Ashby** `openai`, `cohere`, `harvey`, `sierra`, `decagon`, `writer`, `langchain`, `elevenlabs`, `abridge`. **Lever** `palantir`. Dead as of 2026-07-24 (don't retry blindly; find their current ATS via web search): huggingface/glean/ramp/runwayml/retool/notion/weightsandbiases (GH 404), cresta (Lever 404), perplexity-ai + together-ai (Ashby 404). Each run, also try 2–3 new companies found via web search/HN and record working slugs here.
+Company slugs verified working 2026-07-24: **GH** `anthropic`, `scaleai`, `databricks`, `togetherai`, `vercel`, `brex`. **Ashby** `openai`, `cohere`, `harvey`, `sierra`, `decagon`, `writer`, `langchain`, `elevenlabs`, `abridge`. **Lever** `palantir`. Each run, also try a few new companies found via web search and record working slugs here.
+
+**Batch added 2026-08-10** via bulk slug probing (see § Building your roster). 144 candidates probed, **97 hit (67%)**, adding 338 role-family US jobs and roughly doubling the pool:
+
+- **Greenhouse**: `stripe`, `waymo`, `cloudflare`, `coreweave`, `elastic`, `affirm`, `fivetran`, `block`, `figma`, `asana`, `figureai`, `wizinc`, `intercom`, `nuro`, `gusto`, `chainguard`, `chime`, `mercury`, `tailscale`, `lightningai`, `marqeta`, `truveta`, `algolia`, `amplitude`, `arizeai`, `turing`, `heygen`, `alloy`, `airtable`, `observeai`, `typeface`, `descript`, `planetscale`, `labelbox`, `galileo`, `udio`, `stabilityai`, `invisible`, `comet`, `netlify`, `gleanwork`, `cresta`, `duolingo`, `peloton`
+- **Ashby**: `snowflake`, `cerebras`, `cursor`, `plaid`, `vanta`, `handshake`, `rogo`, `synthesia`, `lambda`, `baseten`, `fireworks`, `supabase`, `sentilink`, `lumaai`, `attio`, `render`, `sardine`, `modal`, `linear`, `physicalintelligence`, `hex`, `confluent`, `workos`, `socket`, `braintrust`, `dust`, `assembledhq`, `middesk`, `persona`, `midjourney`, `semgrep`, `anyscale`, `nabla`, `lancedb`, `airbyte`, `pika`, `pinecone`, `railway`, `langfuse`, `atlan`, `stytch`, `unit`, `knock`, `cedar`, `weaviate`, `notion`, `ramp`, `perplexity`, `runway`
+- **Lever**: `zoox`, `includedhealth`, `neon`, `zilliz`, `unify`, `spotify`
+- **Workable**: `huggingface`
+
+Highest-yield additions (role-family US jobs each): `waymo` 64, `zoox` 20, `block` 15, `snowflake` 15, `figureai` 14, `stripe` 14, `handshake` 12, `asana` 10.
+
+**Probed but deliberately excluded**: `shieldai` (434 jobs), `saronic` (247), `applied` (Applied Intuition, 264), `andurilindustries`. Defense-heavy rosters where most roles demand US citizenship or an active clearance, which is a Step A hard exclusion for many candidates. Include them only if that exclusion does not apply to you.
+
+**Not found on any of the five ATS APIs** (likely self-hosted careers pages or Workday/iCIMS): `retool`, `weightsandbiases`/`wandb`. Fall back to source type 2 for these.
 
 **Batch added 2026-07-25** via fastaijobs.com discovery (source type 3), verified live, AI-native/LLM-relevant (filtered out generic IT-support/non-AI-core companies and defense-hardware firms whose roles mostly require citizenship/clearance, e.g. Anduril, Armada gov roles, which are hard-exclusion territory per rubric):
 - **Ashby**: `mercor` (AI hiring/staffing, FDE-heavy, 73 jobs), `basiccapital` (fintech+AI, FDE, 18), `credal` (enterprise LLM governance, FDE, 4), `astronomer` (data orchestration, SE, 27), `blitzy` (AI codegen, solutions, 50), `chalk` (ML feature platform, 15), `coderabbit` (AI code review, 53), `cartesia` (voice AI foundation models, 30), `synthesia` (AI video gen, 76), `replit` (AI coding platform, has DS Trust&Safety, 92), `snorkelai` (note: this one is actually GH not Ashby, see below), `suno` (AI music gen, 69), `happyrobot.ai` (voice AI agents, 81), `trm-labs` (blockchain intelligence/ML, 122), `horizon3ai` (autonomous AI pentesting, 98), `robco` (AI robotics, 38), `Crusoe` (note capital C, GPU/AI cloud infra, 359)
@@ -93,3 +150,25 @@ For LinkedIn Jobs / Indeed / a specific company portal that blocks curl: `previe
 - Location filter: US city or "Remote (US)". "Remote" with no country plus a US company means you should verify inside the JD text.
 - Keep per-run fetch volume sane: roughly 10–15 ATS board pulls plus 5–8 web searches plus 1 HN pull is plenty for 20–30 candidates.
 - 403/404/empty board means skip silently, note nothing. Never fabricate a posting or URL from memory; every reported link must have been fetched this run.
+
+## Building your roster (do this when results feel thin)
+
+**Diagnose before you loosen anything.** Thin output is almost always too few employers, not too strict a filter. Measure the funnel first:
+
+```
+all open jobs → title matches a role family → located where you can work → inside the time window
+```
+
+Measured baseline 2026-08-10 on the AI/tech roster: 45 companies, 6,067 open jobs, but only **~8 jobs per company** survive "matches a role family AND is US-based." That ratio is what caps your results. Adding employers scales output linearly; loosening the rubric just fills the report with jobs you cannot actually get.
+
+**Bulk slug probing** (validates 100+ employers in a few minutes):
+
+1. List 100–200 target employers in your field.
+2. Auto-generate slug variants per name: lowercase-no-spaces, camelCase→hyphenated, plus `ai` / `hq` / `inc` suffixes.
+3. Fire concurrent GETs for every variant against each ATS you care about (~24 workers). A non-empty jobs array means a hit.
+4. Expect roughly a **two-thirds hit rate**. Record the winning slug *and* which ATS it belongs to, since date fields differ per ATS.
+5. For misses, try the remaining endpoints (SmartRecruiters, Workable, Workday), then fall back to web search.
+
+A 404 only means *that slug on that ATS* does not exist. It does **not** mean the employer is not hiring. Measured 2026-08-10: of 10 companies previously written off as dead, **7 were alive** under a different slug or a different ATS (Notion, Ramp, Perplexity, Glean, Cresta, Runway, HuggingFace; several with 90+ open roles each). Always try 2–3 variants across every ATS before recording a miss, or you will silently drop entire employers.
+
+**While probing, record** the ATS per slug and how many role-family jobs each employer yields, so future runs can prioritize the productive ones.
